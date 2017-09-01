@@ -1,0 +1,23 @@
+{
+  "name": "memory-store-gcl",
+  "version": "1.0.0",
+  "description": "add a memory cache store factory in ni framework",
+  "main": "index.js",
+  "scripts": {
+    "test": "jasmine",
+    "build": "babel src -d com -s"
+  },
+  "author": "zhaoyq",
+  "license": "ISC",
+  "dependencies": {
+    "gcl": "^0.2.177"
+  },
+  "devDependencies": {
+    "babel-core": "^6.26.0",
+    "babel-plugin-transform-runtime": "^6.23.0",
+    "babel-polyfill": "^6.26.0",
+    "babel-preset-env": "^1.6.0",
+    "babel-preset-stage-2": "^6.24.1",
+    "babel-runtime": "^6.26.0"
+  }
+}
