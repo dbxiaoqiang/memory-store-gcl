@@ -154,7 +154,8 @@ export class MemoryCacheStore {
         data.time = now
         data.expire = expire
         __.cache[key] = data
-        oldRecord ? __.lruLink.unshiftNode(data) : __.lruLink.unshift(data)
+        oldRecord ? __.lruLink.unshiftNode(oldRecord.node) : __.lruLink.unshift(data)
+        data.node = __.lruLink.head
         return data.value
     }
     /**
@@ -180,8 +181,9 @@ export class MemoryCacheStore {
         const { __ } = pris(this)
         let oldRecord = __.cache[key]
         if (oldRecord) {
-            clearTimeout(oldRecord.timeout)
             delete __.cache[key]
+            __.lruLink.removeNode(oldRecord.node)
+            __.size--
             return oldRecord
         }
         return undefined
@@ -200,6 +202,13 @@ export class MemoryCacheStore {
     get size() {
         const { __ } = pris(this)
         return __.size
+    }
+    /**
+     * 测试用
+     */
+    get __size() {
+        const { __ } = pris(this)
+        return __.lruLink.length
     }
 }
 const pris = commonTool.pris()

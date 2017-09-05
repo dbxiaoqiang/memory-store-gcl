@@ -1,7 +1,13 @@
 {
     "presets": [
-        "env",
-        "stage-2"
+        [
+            "env",
+            {
+                "target": {
+                    "node": "current"
+                }
+            }
+        ]
     ],
     "plugins": [
         "transform-runtime"
