@@ -100,8 +100,9 @@ export class MemoryCacheStore {
                     this.size--
                 }
             },
-            polling() {
-                this.timeoutId = setTimeout.call(this, () => {
+         polling() {
+                let __ = this
+                this.timeoutId = setTimeout(async () => {
                     let now = Date.now(), data
                     for (let tail = this.lruLink.tail; tail;) {
                         data = tail.value
@@ -109,10 +110,10 @@ export class MemoryCacheStore {
                             delete this.cache[data.key]
                             this.lruLink.removeNode(tail)
                             this.size--
-                            tail = tail.pre
                         }
+                        tail = tail.pre
                     }
-                    this.polling()
+                    this.polling.call(__)
                 }, this.cycle)
             },
             reset() {
@@ -140,21 +141,20 @@ export class MemoryCacheStore {
             throw new Error('请输入正确的过期时间')
         }
         const { _, __ } = pris(this)
-        let oldRecord = __.cache[key]
+        let now = Date.now(), oldRecord = __.cache[key], data
         if (!oldRecord) {
             if (__.size >= __.maxSize) {
                 __.expire()
             }
             __.size++
-        }
-        let now = Date.now(), data = {
-            key: key,
-            value: value,
-            time: now,
-            expire: expire,
-        }
+            data = {}
+        } else { data = oldRecord }
+        data.key = key
+        data.value = value
+        data.time = now
+        data.expire = expire
         __.cache[key] = data
-        __.lruLink.unshift(data)
+        oldRecord ? __.lruLink.unshiftNode(data) : __.lruLink.unshift(data)
         return data.value
     }
     /**
