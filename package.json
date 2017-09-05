@@ -10,7 +10,8 @@
   "author": "zhaoyq",
   "license": "ISC",
   "dependencies": {
-    "gcl": "^0.2.177"
+    "gcl": "^0.2.177",
+    "yallist": "^3.0.2"
   },
   "devDependencies": {
     "babel-core": "^6.26.0",

@@ -3,9 +3,10 @@ import {
     NiDataConnection,
 } from 'gcl/com/coooders/db/ni'
 import commonTool from 'gcl/com/coooders/common/tool'
+import Yallist from 'yallist'
 
 export class MemoryCacheFactory extends NiDataFactory {
-    constructor(parser, maxSize) {
+    constructor(parser, maxSize, cycle) {
         super()
         let fac_context = this
         const { _, __ } = pris(fac_context, {
@@ -16,7 +17,7 @@ export class MemoryCacheFactory extends NiDataFactory {
                     const { __ } = pris(con_context, {
                         cmds: [],
                         conn: null,
-                        memCache: new MemoryCacheStore(fac_context.maxSize),
+                        memCache: new MemoryCacheStore(fac_context.maxSize, fac_context.cycle),
                         invoke: async (command, params) => {
                             const { __ } = pris(con_context)
                             let queryList = fac_context.parser.parse(command, parmas)
@@ -67,7 +68,7 @@ export class MemoryCacheFactory extends NiDataFactory {
                 }
             }
         })
-        _.parser = parser, _.maxSize = maxSize
+        _.parser = parser, _.maxSize = maxSize, _.cycle = cycle
     }
     createDBConnection() {
         const { __ } = pris(this)
@@ -83,27 +84,50 @@ export class MemoryCacheFactory extends NiDataFactory {
  * 只可以做一些Master数据的缓存 如果想保存其他的数据 例如Session 必须使用第三方的缓存 例如: Redis
  */
 export class MemoryCacheStore {
-    constructor(maxSize) {
+    constructor(maxSize = 10000, cycle = 5000) {
         const { _, __ } = pris(this, {
             cache: Object.create(null),
+            lruLink: new Yallist(),
+            timeoutId: undefined,
             size: 0,
-            maxSize: maxSize ? maxSize : 10000,
+            maxSize: maxSize,
+            cycle: cycle,
             expire() {
-                let key, earliest = Number.MAX_VALUE;
-                commonTool.forC(this.cache, (k, v) => {
-                    if (v.time < earliest) {
-                        earliest = v.time
-                        key = k
-                    }
-                }, true)
-                if (key) {
-                    let data = this.cache[key]
-                    clearTimeout(data.timeout)
-                    delete this.cache[key]
+                let tail = this.lruLink.tail
+                if (tail) {
+                    delete this.cache[tail.value.key]
+                    this.lruLink.removeNode(tail)
                     this.size--
                 }
+            },
+            polling() {
+                this.timeoutId = setTimeout.call(this, () => {
+                    let now = Date.now(), data
+                    for (let tail = this.lruLink.tail; tail;) {
+                        data = tail.value
+                        if ((data.time + data.expire) <= now) {
+                            delete this.cache[data.key]
+                            this.lruLink.removeNode(tail)
+                            this.size--
+                            tail = tail.pre
+                        } else {
+                            tail = null
+                        }
+                    }
+                    this.polling()
+                }, this.cycle)
+            },
+            reset() {
+                this.cache = Object.create(null)
+                this.size = 0
+                this.lruLink = new Yallist()
+                if (this.timeoutId) {
+                    clearTimeout(this.timeoutId)
+                }
+                this.polling()
             }
         })
+        __.reset()
     }
     /**
      * 按照键值对 保存数据
@@ -119,37 +143,35 @@ export class MemoryCacheStore {
         }
         const { _, __ } = pris(this)
         let oldRecord = __.cache[key]
-        if (oldRecord) {
-            clearTimeout(oldRecord.timeout)
-        } else {
+        if (!oldRecord) {
             if (__.size >= __.maxSize) {
                 __.expire()
             }
             __.size++
         }
         let now = Date.now(), data = {
+            key: key,
             value: value,
-            expire: now + expire,
-            time: now
+            time: now,
+            expire: expire,
         }
-        data.timeout = setTimeout(function () {
-            delete __.cache[key]
-            __.size--
-        }, expire)
         __.cache[key] = data
+        __.lruLink.unshift(data)
         return data.value
     }
     /**
      * 从缓存里按照给定的Key值读取数据
      * 读取不到的情况 返回undefined
+     * 读取到数据的情况下 更新数据的访问时间
      * @param {*} key 唯一的Key值
      */
     get(key) {
         const { __ } = pris(this)
         let data = __.cache[key]
-        if (typeof data == 'undefined') {
+        if (!data) {
             return undefined
         }
+        data.time = Date.now()
         return data.value
     }
     /**
@@ -172,11 +194,7 @@ export class MemoryCacheStore {
      */
     clear() {
         const { __ } = pris(this)
-        commonTool.forC(__.cache, (k, v) => {
-            clearTimeout(v.timemout)
-        }, true)
-        __.size = 0
-        __.cache = Object.create(null)
+        __.reset()
     }
     /**
      * 返回缓存中保存的数据条数

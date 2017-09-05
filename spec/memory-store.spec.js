@@ -4,7 +4,7 @@ let memstore
 
 describe('测试MemoryStore模块', () => {
     beforeEach(() => {
-        memstore = new memoryStore(2)
+        memstore = new memoryStore(2, 400)
     })
     it('测试过期时间只能为正数', done => {
         let key = 'test', value = 1, expire = '', err
@@ -42,10 +42,15 @@ describe('测试MemoryStore模块', () => {
         expect(ret).toEqual(value)
         setTimeout(() => {
             ret = memstore.get(key)
-            expect(ret).toEqual(undefined)
-            expect(memstore.size).toEqual(0)
-            done()
-        }, 500)
+            expect(ret).not.toEqual(undefined)
+            expect(memstore.size).toEqual(1)
+            setTimeout(() => {
+                ret = memstore.get(key)
+                expect(ret).toEqual(undefined)
+                expect(memstore.size).toEqual(0)
+                done()
+            }, 500)
+        }, 200)
     })
     it('测试超时之前 重新保存一个新的值 过期时间会自动延长 并且不会删除之前保存的值', done => {
         let key = 'test', value = 1
@@ -53,11 +58,10 @@ describe('测试MemoryStore模块', () => {
         expect(ret).toEqual(value)
         setTimeout(() => {
             value = 2
-            ret = memstore.put(key, value, 200)
+            ret = memstore.put(key, value, 300)
             expect(ret).toEqual(value)
-        }, 100)
+        }, 200)
         setTimeout(function () {
-            ret = memstore.put(key, value, 200)
             expect(ret).toEqual(value)
             expect(memstore.size).toEqual(1)
             done()
