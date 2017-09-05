@@ -94,4 +94,16 @@ describe('测试MemoryStore模块', () => {
         expect(memstore.size).toEqual(0)
         done()
     })
+    fit('测试过期的轮询处理中 只删除过期的数据', done => {
+        let key1 = 'test1', value1 = 1,
+            key2 = 'test2', value2 = 2
+        memstore.put(key1, value1, 200)
+        memstore.put(key2, value2)
+        setTimeout(() => {
+            let ret = memstore.get(key2)
+            expect(ret).toEqual(value2)
+            expect(memstore.size).toEqual(1)
+            done()
+        }, 500)
+    })
 })

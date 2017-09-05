@@ -110,8 +110,6 @@ export class MemoryCacheStore {
                             this.lruLink.removeNode(tail)
                             this.size--
                             tail = tail.pre
-                        } else {
-                            tail = null
                         }
                     }
                     this.polling()
