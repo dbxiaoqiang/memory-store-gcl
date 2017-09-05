@@ -32,6 +32,7 @@ describe('测试MemoryStore模块', () => {
             expect(ret).toEqual(value)
         }, 200)
         setTimeout(function () {
+            ret = memstore.get(key)
             expect(ret).toEqual(value)
             expect(memstore.size).toEqual(1)
             done()
